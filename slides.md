@@ -4,6 +4,15 @@ Dynamic Programming
 
 ---
 
+# 동적 계획법
+
+* Dynamic 하고도, Programming 하고도 아무 관련 없는 알고리즘 설계 패러다임
+    * 전산학의 역사 사상 제일 잘못 지은 이름이라고 생각합니다
+* 한 마디로 말하자면: 문제를 여러 조각들로 나누고, 이 때 여러 번 계산되는 문제들을 메모리에 저장해서 속도를 올린다
+* 프로그래밍 대회에서는 참 중요하죠
+
+---
+
 # 무슨 이야기를 할까요
 
 * 재귀 호출: 문제를 여러 조각으로 쪼개 재귀적으로 해결하는 방법
@@ -209,4 +218,160 @@ Dynamic Programming
 </center>
 
 * 이런 현상을 *중복되는 부분 문제* (overlapping subproblems) 라고 부릅니다
+
+---
+
+# 이항 계수 (binomail coefficient)
+
+\\[
+\\left({n\\atop r}\\right)=\\begin{cases}
+\\left({n-1\\atop r-1}\\right)+\\left({n-1\\atop r}\\right)\\\\
+1 & (r=0\\mbox{ or }n=r)\\end{cases}\\]
+
+구현하는 건 간단하죠?
+
+    !cpp
+    int bino(int n, int r) {
+        // 기저 사례: n=r or r=0
+        if(r == 0 || n == r) return 1;
+        return bino(n-1, r-1) + bino(n-1, r);
+    }
+
+---
+
+# 아니 이게 무슨 소리야
+
+<img src="figures/binomial_call_tree.dot.png" width="250">
+<img src="figures/binomial_call_tree2.dot.png" width="250">
+<img src="figures/binomial_call_tree3.dot.png" width="250">
+
+* `bino(25,12)` 를 계산하려면 1천만번의 함수 호출이 필요하다고?
+* 의사양반 내 코드가 ㄱㅈ란 말이요
+
+---
+
+# 시간-공간 트레이드오프
+
+    !cpp
+    int cache[100][100];
+    int bino(int n, int r) {
+        if(n == r || r == 0) return 1;
+        int& ret = cache[n][r];
+        if(ret != -1) return ret;
+        return ret = bino(n-1, r-1) + bino(n-1, r);
+    }
+    ..
+    memset(cache, -1, sizeof(cache));
+
+* 함수의 반환값을 저장해 둘 캐시를 만들어 놓자
+* 한 번 계산한 값은 캐시에 저장해 두고
+* 함수가 호출될 때마다 저장된 적이 있는지 캐시에 확인하기
+* 간단하죠? 이런 기법을 메모이제이션 (memoization) 이라고 부릅니다
+
+---
+
+# 메모이제이션을 언제 쓸 수 있나?
+
+    !cpp
+    int counter = 0;
+    int count() {
+        return counter++;
+    }
+
+* 이런 함수에 쓰는 바보짓을 할 순 없죠..
+* 전역 변수, 클래스의 멤버 변수, 파일 입력, 키보드 입력에 영향받는 함수는 안된다
+* 함수 반환값이 항상 함수의 입력에 의해서만 계산되는 함수
+* 멋있게는 참조적 투명한 (referential transparent) 함수에만 써먹을 수 있죠
+
+---
+
+# 메모이제이션의 시간 복잡도 분석
+
+<center>
+
+![](figures/calltree.dot.png)
+
+## (부분 문제의 수)$\\times$(부분 문제 하나당 반복문 실행 회수)
+
+## = (굵은 원의 수)$\\times$(굵은 원 하나당 나가는 화살표의 수)
+
+</center>
+
+---
+
+# 삼각형 위의 최대 경로 찾기
+
+<center><pre style="font-size: 35px;"><code>6
+1 2
+3 7 4
+9 4 1 7
+2 7 5 9 4</code></pre></center>
+
+* 맨 위의 숫자에서 시작해 한 칸씩 아래로 내려가기
+* 왼쪽이나 오른쪽 숫자로 내려갈 수 있음
+* 경로에서 만나는 숫자의 최대 합은 얼마일까?
+
+---
+
+# 무식하게 메모이제이션 적용하기
+
+    !cpp
+    // MAX_NUMBER: 한 칸에 들어갈 숫자의 최대값
+    int n, triangle[100][100];
+    int cache[100][100][MAX_NUMBER*100+1];
+
+    // (y,x) 위치까지 내려오기 전에 만난 숫자들의 합이 sum 일 때
+    // 맨 아래줄까지 내려가면서 얻을 수 있는 최대 경로를 반환한다
+    int path1(int y, int x, int sum) {
+        // 기저 사례: 맨 아래 줄까지 도달했을 경우
+        if(y == n-1) return sum + triangle[y][x];
+
+        // 메모이제이션
+        int& ret = cache[y][x][sum];
+        if(ret != -1) return ret;
+
+        sum += triangle[y][x];
+        return ret = max(path1(y+1, x+1, sum), path1(y+1, x, sum));
+    }
+
+---
+
+# 아니 의사선생 내코드가 ㄱㅈ란 말이요
+
+<center><pre style="font-size: 35px;"><code>1
+2 4
+8 16 32
+64 128 256 512
+1024 2048 4096 8192 16384</code></pre></center>
+
+* 모든 경로는 서로 합이 다르다!
+* 두 부분 문제가 겹칠 일이 없어요
+
+---
+
+# 최적 부분 구조가 구해줄거야
+
+* `path1()` 의 입력 $y$, $x$, $sum$ 은 두 부류로 나눌 수 있다
+    * $y$, $x$: 부분 문제의 정의 = 앞으로 풀어야 할 조각들
+    * $sum$: 지금까지 해결한 조각들의 결과
+* 이 때 *$(y,x)$ 에서 내려가는 최대 경로* 랑 $sum$ 이랑은 상관이 없어요
+* 지금까지 어떤 경로로 내려왔건간에 `path1()` 는 $(y,x)$ 에서 내려가는 최대 경로만 찾거든요
+
+---
+
+# 최적 부분 구조
+
+* _문제와 분할 방식이 가지는 성질_
+* 부분 문제의 최적해만 갖고 있으면 전체 문제의 최적해를 구성해낼 수 있다
+    * 다르게 말해, 부분 문제는 항상 최적해만 구하면 된다!
+* 성립하지 않는 예:
+    * 맨 윗줄에서 아랫줄까지 내려오면서 같은 숫자를 두번 만나면 안된다
+    * 이 위에서 어떤 수를 만났느냐에 따라 다른 답을 반환해야 할 수도 있다!
+
+---
+
+# 문제 정의 바꾸기
+
+* `path1(y,x,sum)`: $(y,x)$ 까지 내려오는 경로의 합이 $sum$ 이었을 때 전체 경로의 최대 합
+* `path2(y,x)`: $(y,x)$ 에서 맨 아래까지 내려가는 경로 중 최대 합
 
